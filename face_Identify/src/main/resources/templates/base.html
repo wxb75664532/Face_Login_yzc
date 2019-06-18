@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+    <title>拍照</title>
+</head>
+<body>
+<video id="video" autoplay></video>
+<canvas id="canvas" style="display:none"></canvas>
+<button id="photo">拍照</button>
+<script>
+$(function(){
+    $("#photo").click(function(){
+        uploadImage()
+    })
+})
+</script>
+</body>
+<script type="text/javascript">
+    <!--js代码-->
+    var video = document.getElementById('video');
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+
+    //访问用户媒体设备的兼容方法
+    function getUserMedia(constraints, success, error) {
+        if (navigator.mediaDevices.getUserMedia) {
+            //最新的标准API
+            navigator.mediaDevices.getUserMedia(constraints).then(success).catch(error);
+        } else if (navigator.webkitGetUserMedia) {
+            //webkit核心浏览器
+            navigator.webkitGetUserMedia(constraints,success, error)
+        } else if (navigator.mozGetUserMedia)                {
+            //firfox浏览器
+            navigator.mozGetUserMedia(constraints, success, error);
+        } else if (navigator.getUserMedia) {
+            //旧版API
+            navigator.getUserMedia(constraints, success, error);
+        }
+    }
+
+    function success(stream) {
+        //兼容webkit核心浏览器
+        // var CompatibleURL = window.URL || window.webkitURL;
+        //video.src = CompatibleURL.createObjectURL(stream);
+        //将视频流设置为video元素的源
+        video.srcObject = stream;
+        video.play();
+    }
+
+    function error(error) {
+        console.log('访问用户媒体设备失败${error.name}, ${error.message}');
+    }
+
+    if (navigator.mediaDevices.getUserMedia || navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia) {
+        getUserMedia({video : {width:200, height:200}}, success, error);
+    } else {
+        alert('不支持访问用户媒体');
+    }
+    //图片上传到服务器
+    //获取Canvas的编码。
+    function uploadImage(){
+        canvas.width = 300;
+        canvas.height = 300;
+        context.drawImage(video, 0, 0, 300, 300);
+        var imgData = canvas.toDataURL();
+
+        //上传到后台。
+        var uploadAjax = $.ajax({
+            type: "post",
+            //后端需要调用的地址
+            url:"doing/search",
+            data: {"imgData": imgData},
+            //设置超时
+            timeout:10000,
+            async: true,
+            success: function (data) {
+                //成功后回调
+                // if(data.context>"90")
+                // {
+                //     window.location.href="/success";
+                // }else {
+                //     alert(data.context);
+                // }
+                alert(data.context);
+
+            },
+            error: function(data) {
+            },
+            //调用执行后调用的函数
+            complete: function (XMLHttpRequest, textStatus) {
+                if(textStatus == 'timeout'){
+                    uploadAjax.abort(); //取消请求
+                    //超时提示：请求超时，请重试
+                    alert("请求超时，请重试")
+                    //请求超时返回首页
+                    closeCard();
+                }
+            }
+        });
+    }
+    //setInterval("uploadImage()","1100");  //每隔一秒执行一次函数截图
+</script>
+</html>
